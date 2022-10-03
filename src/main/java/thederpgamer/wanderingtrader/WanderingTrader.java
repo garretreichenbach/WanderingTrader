@@ -1,6 +1,7 @@
 package thederpgamer.wanderingtrader;
 
 import api.listener.Listener;
+import api.listener.events.controller.ServerInitializeEvent;
 import api.listener.events.player.PlayerJoinWorldEvent;
 import api.mod.StarLoader;
 import api.mod.StarMod;
@@ -8,6 +9,7 @@ import api.mod.config.PersistentObjectUtil;
 import thederpgamer.wanderingtrader.data.PlayerData;
 import thederpgamer.wanderingtrader.manager.ConfigManager;
 import thederpgamer.wanderingtrader.manager.TraderManager;
+import thederpgamer.wanderingtrader.server.WanderingTraderCommand;
 import thederpgamer.wanderingtrader.util.DataUtils;
 
 import java.io.File;
@@ -45,7 +47,11 @@ public class WanderingTrader extends StarMod {
 		initLogger();
 
 		registerListeners();
+		registerCommands();
+	}
 
+	@Override
+	public void onServerCreated(ServerInitializeEvent serverInitializeEvent) {
 		TraderManager.initialize();
 	}
 	private void initLogger() {
@@ -97,5 +103,9 @@ public class WanderingTrader extends StarMod {
 				}
 			}
 		}, this);
+	}
+
+	private void registerCommands() {
+		StarLoader.registerCommand(new WanderingTraderCommand());
 	}
 }

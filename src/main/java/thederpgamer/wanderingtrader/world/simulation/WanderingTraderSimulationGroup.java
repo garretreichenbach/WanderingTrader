@@ -1,6 +1,5 @@
 package thederpgamer.wanderingtrader.world.simulation;
 
-import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.server.data.GameServerState;
 import org.schema.game.server.data.simulation.groups.ShipSimulationGroup;
 
@@ -11,7 +10,7 @@ import org.schema.game.server.data.simulation.groups.ShipSimulationGroup;
  */
 public class WanderingTraderSimulationGroup extends ShipSimulationGroup {
 
-	public WanderingTraderSimulationGroup(GameServerState gameServerState, Vector3i pos) {
+	public WanderingTraderSimulationGroup(GameServerState gameServerState) {
 		super(gameServerState);
 	}
 

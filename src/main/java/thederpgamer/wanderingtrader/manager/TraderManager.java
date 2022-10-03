@@ -67,4 +67,23 @@ public class TraderManager {
 		}
 		return trader;
 	}
+
+	public static void clearAggression(String playerName) {
+		HashMap<String, PlayerData> playerMap = loadPlayerDataMap();
+		if(playerName == null) {
+			for(PlayerData playerData : playerMap.values()) {
+				playerData.setLastTransgression(-1);
+				PersistentObjectUtil.removeObject(WanderingTrader.getInstance().getSkeleton(), playerData);
+				PersistentObjectUtil.addObject(WanderingTrader.getInstance().getSkeleton(), playerData);
+			}
+		} else {
+			PlayerData playerData = playerMap.get(playerName);
+			if(playerData != null) {
+				playerData.setLastTransgression(-1);
+				PersistentObjectUtil.removeObject(WanderingTrader.getInstance().getSkeleton(), playerData);
+				PersistentObjectUtil.addObject(WanderingTrader.getInstance().getSkeleton(), playerData);
+			}
+		}
+		PersistentObjectUtil.save(WanderingTrader.getInstance().getSkeleton());
+	}
 }

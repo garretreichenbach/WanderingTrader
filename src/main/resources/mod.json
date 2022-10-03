@@ -1,7 +1,7 @@
 {
   "name": "WanderingTrader",
   "author": "TheDerpGamer",
-  "description": "Adds a wandering trader to the game.",
+  "description": "Adds a wandering trader to the game who offers cheap prices for goods.",
   "version": "1.0.0",
   "starmade_version": "0.203.122",
   "client_mod": false,

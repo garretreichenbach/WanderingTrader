@@ -1,5 +1,10 @@
 package thederpgamer.wanderingtrader.data;
 
+import org.schema.common.util.linAlg.Vector3i;
+import org.schema.game.common.data.player.PlayerState;
+import org.schema.game.server.data.GameServerState;
+import org.schema.game.server.data.PlayerNotFountException;
+
 /**
  * Data storage class that is used to store player data pertaining to the Wandering Trader.
  *
@@ -40,5 +45,21 @@ public class PlayerData {
 
 	public void setLastTransgression(long lastTransgression) {
 		this.lastTransgression = lastTransgression;
+	}
+
+	public Vector3i getSector() {
+		try {
+			return GameServerState.instance.getPlayerFromName(playerName).getCurrentSector();
+		} catch(PlayerNotFountException exception) {
+			return null;
+		}
+	}
+
+	public PlayerState getPlayerState() {
+		try {
+			return GameServerState.instance.getPlayerFromName(playerName);
+		} catch(PlayerNotFountException exception) {
+			return null;
+		}
 	}
 }

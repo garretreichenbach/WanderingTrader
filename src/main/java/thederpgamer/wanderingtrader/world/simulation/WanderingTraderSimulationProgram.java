@@ -1,5 +1,6 @@
 package thederpgamer.wanderingtrader.world.simulation;
 
+import org.schema.common.util.linAlg.Vector3i;
 import org.schema.game.server.ai.program.common.TargetProgram;
 import org.schema.game.server.ai.program.simpirates.SimulationProgramInterface;
 import org.schema.game.server.data.simulation.SimPrograms;
@@ -17,8 +18,9 @@ import java.util.HashMap;
  */
 public class WanderingTraderSimulationProgram  extends TargetProgram<SimulationGroup> implements SimulationProgramInterface {
 
-	public WanderingTraderSimulationProgram(SimulationGroup simulationGroup) {
+	public WanderingTraderSimulationProgram(SimulationGroup simulationGroup, Vector3i target) {
 		super(simulationGroup, false);
+		setSectorTarget(target);
 	}
 
 	@Override
