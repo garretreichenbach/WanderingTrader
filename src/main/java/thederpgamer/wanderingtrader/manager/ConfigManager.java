@@ -11,8 +11,8 @@ public class ConfigManager {
 			"debug-mode: false",
 			"max-world-logs: 5",
 			"trader-idle-timeout-minutes: 15",
-			"trader-main-bp: Wandering Trader",
-			"trader-escort-bps: Trader Escort 1, Trader Escort 2"
+			"trader-main-bp: Wandering_Trader",
+			"trader-escort-bps: Trader_Escort_1,Trader_Escort_2"
 	};
 	private static final String[] defaultTradeConfig = {
 			//TODO: Add default trade config

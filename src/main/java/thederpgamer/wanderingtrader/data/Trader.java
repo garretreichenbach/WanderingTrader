@@ -79,7 +79,7 @@ public class Trader extends Thread {
 					simMan.addGroup(simulationGroup);
 					int factionID = FactionManager.NPC_FACTION_START;
 					//CatalogPermission[] temp = simMan.getBlueprintList(3, 3, factionID); //Count, Level, Faction
-					CatalogPermission[] temp = getBlueprints(3);
+					CatalogPermission[] temp = getBlueprints();
 					//Todo: Dynamic level system that increases when players are hostile to the trader and slowly decreases over time if the trader is not attacked.
 					//CatalogPermission[] bps = new CatalogPermission[temp.length + 1];
 					//for(int i = 0; i < temp.length; i++) bps[i] = temp[i];
@@ -125,15 +125,13 @@ public class Trader extends Thread {
 		return playerData;
 	}
 
-	private CatalogPermission[] getBlueprints(int count) {
+	private CatalogPermission[] getBlueprints() {
 		ArrayList<CatalogPermission> bps = new ArrayList<>();
-		int i = 0;
 		for(CatalogPermission permission : Objects.requireNonNull(GameCommon.getGameState()).getCatalogManager().getCatalog()) {
-			if(i >= count) break;
 			for(String name : ConfigManager.getMainConfig().getList("trader-escort-bps")) {
+				name = name.replace("_", " ");
 				if(permission.getUid().contains(name)) {
 					bps.add(permission);
-					i ++;
 					break;
 				}
 			}
@@ -143,8 +141,9 @@ public class Trader extends Thread {
 	}
 
 	private CatalogPermission getTraderBP() {
+		String name = ConfigManager.getMainConfig().getConfigurableValue("trader-main-bp", "Wandering_Trader").replace("_", " ");
 		for(CatalogPermission permission : Objects.requireNonNull(GameCommon.getGameState()).getCatalogManager().getCatalog()) {
-			if(permission.getUid().contains(ConfigManager.getMainConfig().getConfigurableValue("trader-main-bp", "Wandering Trader"))) return permission;
+			if(permission.getUid().contains(name)) return permission;
 		}
 		return null;
 	}
