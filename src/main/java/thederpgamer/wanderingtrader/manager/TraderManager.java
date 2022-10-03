@@ -60,7 +60,7 @@ public class TraderManager {
 	 */
 	public static Trader getTrader() {
 		//Check if trader is null or thread is dead
-		if(trader == null || !trader.isAlive()) {
+		if(trader == null) {
 			//If so, create a new trader
 			WanderingTrader.log.warning("Trader thread is either null or dead, creating a new one.");
 			(trader = new Trader()).start();

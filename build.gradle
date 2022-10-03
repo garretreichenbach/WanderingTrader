@@ -8,7 +8,7 @@ sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
 def starmadeDirectory = 'D:/Game Files/Steam/steamapps/common/StarMade/StarMade/'
-def jarName = 'LorefulLoot'
+def jarName = 'WanderingTrader'
 mainClassName = 'thederpgamer.wanderingtrader.WanderingTrader'
 group 'thederpgamer.wanderingtrader'
 version '1.0.0'

@@ -78,8 +78,9 @@ public class WanderingTraderCommand implements CommandInterface {
 					WanderingTrader.log.info("Wandering Trader Status: \n" + status);
 					break;
 			}
-		} catch(Exception ignored) {
-			return false;
+		} catch(Exception exception) {
+			WanderingTrader.log.warning("Error executing command: " + exception.getMessage());
+			exception.printStackTrace();
 		}
 		return true;
 	}
