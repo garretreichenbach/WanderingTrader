@@ -1,8 +1,15 @@
 package thederpgamer.wanderingtrader.data;
 
 import org.schema.common.util.linAlg.Vector3i;
-import org.schema.game.common.data.fleet.Fleet;
+import org.schema.game.common.data.player.catalog.CatalogPermission;
+import org.schema.game.common.data.player.faction.FactionManager;
+import org.schema.game.server.data.GameServerState;
+import org.schema.game.server.data.simulation.SimulationManager;
+import org.schema.game.server.data.simulation.groups.ShipSimulationGroup;
+import org.schema.game.server.data.simulation.jobs.SimulationJob;
 import thederpgamer.wanderingtrader.manager.ConfigManager;
+import thederpgamer.wanderingtrader.world.simulation.WanderingTraderSimulationGroup;
+import thederpgamer.wanderingtrader.world.simulation.WanderingTraderSimulationProgram;
 
 /**
  * Thread that handles the Wandering Trader.
@@ -19,9 +26,8 @@ public class Trader extends Thread {
 	}
 
 	private boolean traderActive = false;
-	private TraderStatus traderStatus = TraderStatus.IDLE;
+	private TraderStatus traderStatus = TraderStatus.DEAD;
 	private long lastTraderAction;
-	private Fleet traderFleet;
 
 	public Trader() {
 		super("Wandering Trader");
@@ -35,14 +41,33 @@ public class Trader extends Thread {
 	}
 
 	public void initTrader() {
-		//Generate in a random unloaded sector near 2,2,2
-		int xOffset = 2;
-		Vector3i sector = new Vector3i();
-
-		traderFleet = new Fleet();
-		traderFleet.addMemberFromEntity();
+		final GameServerState gameServerState = GameServerState.instance;
 		lastTraderAction = System.currentTimeMillis();
+		final SimulationJob simJob = new SimulationJob() {
+			@Override
+			public void execute(SimulationManager simMan) {
+				Vector3i pos = simMan.getUnloadedSectorAround(new Vector3i(2, 2, 2), new Vector3i());
+				ShipSimulationGroup simulationGroup = new WanderingTraderSimulationGroup(gameServerState, pos);
+				simMan.addGroup(simulationGroup);
+				int factionID = FactionManager.TRAIDING_GUILD_ID;
+				CatalogPermission[] temp = simMan.getBlueprintList(3,3, factionID); //Count, Level, Faction
+				//Todo: Dynamic level system that increases when players are hostile to the trader and slowly decreases over time if the trader is not attacked.
+				//CatalogPermission[] bps = new CatalogPermission[temp.length + 1];
+				//for(int i = 0; i < temp.length; i++) bps[i] = temp[i];
+				//temp[temp.length - 1] = getTraderBP();
+				//simulationGroup.createFromBlueprints(pos, simMan.getUniqueGroupUId(), factionID, bps);
+				simulationGroup.createFromBlueprints(pos, simMan.getUniqueGroupUId(), factionID, temp);
+				simulationGroup.setCurrentProgram(new WanderingTraderSimulationProgram(simulationGroup));
+			}
+		};
+		gameServerState.getSimulationManager().addJob(simJob);
 	}
+
+	/*
+	private CatalogPermission getTraderBP() {
+
+	}
+	 */
 
 	/*
 	private void spawnAdvancedPirates(PlayerState p) {
