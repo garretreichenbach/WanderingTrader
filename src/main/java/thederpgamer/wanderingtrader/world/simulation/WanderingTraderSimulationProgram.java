@@ -13,6 +13,7 @@ import org.schema.schine.ai.MachineProgram;
 import org.schema.schine.ai.stateMachines.*;
 import thederpgamer.wanderingtrader.WanderingTrader;
 import thederpgamer.wanderingtrader.manager.ConfigManager;
+import thederpgamer.wanderingtrader.manager.TraderManager;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -70,8 +71,8 @@ public class WanderingTraderSimulationProgram extends MachineProgram<WanderingTr
 
 			WT_Starting starting = new WT_Starting(gObj);
 			WT_MovingToSector movingToSector = new WT_MovingToSector(gObj);
-			int timeoutSeconds = (int) (ConfigManager.getMainConfig().getConfigurableLong("trader-idle-timeout", 15000) / 1000);
-			WaitingTimed waitingInTargetSector = new WaitingTimed(gObj, timeoutSeconds);
+			int timeoutSeconds = (int) (ConfigManager.getMainConfig().getConfigurableLong("trader-idle-timeout-minutes", 15) * 60);
+			WT_WaitingTimed waitingInTargetSector = new WT_WaitingTimed(gObj, timeoutSeconds);
 
 			starting.addTransition(t_moveToSector, movingToSector);
 			movingToSector.addTransition(t_targetSectorReached, waitingInTargetSector);
@@ -125,7 +126,7 @@ public class WanderingTraderSimulationProgram extends MachineProgram<WanderingTr
 			for (int i = 0; i < getSimGroup().getMembers().size(); i++) {
 				try {
 					getSimGroup().getSector(getSimGroup().getMembers().get(i), pos);
-					if (pos.equals(p.getSectorTarget())) {
+					if(pos.equals(p.getSectorTarget())) {
 						stateTransition(Transition.TARGET_SECTOR_REACHED);
 						return true;
 					}
@@ -137,21 +138,17 @@ public class WanderingTraderSimulationProgram extends MachineProgram<WanderingTr
 			if (System.currentTimeMillis() - lastMove > SimulationGroup.SECTOR_SPEED_MS) {
 				boolean existsGroupInSector = getSimGroup().getState().getSimulationManager().existsGroupInSector(p.getSectorTarget());
 				boolean occ = false;
-				for (int i = 0; i < getSimGroup().getMembers().size(); i++) {
+				for(int i = 0; i < getSimGroup().getMembers().size(); i++) {
 					boolean noError;
-					if (getSimGroup().getState().getUniverse().isSectorLoaded(p.getSectorTarget())) {
-						//always go in loaded sector
-						noError = getSimGroup().moveToTarget(getSimGroup().getMembers().get(i), p.getSectorTarget());
-					} else {
-						if (existsGroupInSector) {
-							//wait
+					if(getSimGroup().getState().getUniverse().isSectorLoaded(p.getSectorTarget())) noError = getSimGroup().moveToTarget(getSimGroup().getMembers().get(i), p.getSectorTarget());
+					else {
+						if(existsGroupInSector) {
 							occ = true;
 							noError = true;
 							Vector3i dir = Element.DIRECTIONSi[Universe.getRandom().nextInt(Element.DIRECTIONSi.length)];
 							try {
 								Vector3i secPos = getSimGroup().getSector(getSimGroup().getMembers().get(i), new Vector3i());
 								secPos.add(dir);
-								//
 								getSimGroup().moveToTarget(getSimGroup().getMembers().get(i), secPos);
 							} catch (Exception e) {
 								e.printStackTrace();
@@ -168,6 +165,21 @@ public class WanderingTraderSimulationProgram extends MachineProgram<WanderingTr
 					lastMove = System.currentTimeMillis();
 				}
 				if(occ) System.err.println("[MOVING TO SECTOR] Position " + p.getSectorTarget() + " occupied for " + getSimGroup().getMembers());
+			}
+			return false;
+		}
+	}
+
+	private static class WT_WaitingTimed extends WaitingTimed {
+		public WT_WaitingTimed(AiEntityStateInterface gObj, int timeoutSeconds) {
+			super(gObj, timeoutSeconds);
+		}
+
+		@Override
+		public boolean onUpdate() throws FSMException {
+			if(super.onUpdate() && TraderManager.getTrader().lastTraderAction >= (ConfigManager.getMainConfig().getConfigurableLong("trader-idle-timeout-minutes", 15) * 60000)) {
+				stateTransition(Transition.RESTART);
+				return true;
 			}
 			return false;
 		}

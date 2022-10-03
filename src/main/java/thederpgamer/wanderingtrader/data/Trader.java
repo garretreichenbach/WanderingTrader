@@ -1,17 +1,26 @@
 package thederpgamer.wanderingtrader.data;
 
+import api.common.GameCommon;
+import api.common.GameServer;
 import api.mod.config.PersistentObjectUtil;
 import api.utils.game.PlayerUtils;
 import org.schema.common.util.linAlg.Vector3i;
+import org.schema.game.common.controller.SegmentController;
+import org.schema.game.common.controller.ShopInterface;
 import org.schema.game.common.data.player.catalog.CatalogPermission;
 import org.schema.game.common.data.player.faction.FactionManager;
+import org.schema.game.network.objects.TradePrice;
 import org.schema.game.server.data.GameServerState;
 import org.schema.game.server.data.simulation.SimulationManager;
 import org.schema.game.server.data.simulation.jobs.SimulationJob;
 import thederpgamer.wanderingtrader.WanderingTrader;
 import thederpgamer.wanderingtrader.manager.ConfigManager;
+import thederpgamer.wanderingtrader.manager.TraderManager;
 import thederpgamer.wanderingtrader.world.simulation.WanderingTraderSimulationGroup;
 import thederpgamer.wanderingtrader.world.simulation.WanderingTraderSimulationProgram;
+
+import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * Thread that handles the Wandering Trader.
@@ -27,15 +36,12 @@ public class Trader extends Thread {
 	}
 
 	private TraderStatus traderStatus = TraderStatus.DEAD;
-	private long lastTraderAction;
+	public long lastTraderAction;
 	private PlayerData targetPlayer;
 	private WanderingTraderSimulationGroup simulationGroup;
-	private String traderName;
-	private long lastUpdate;
 
 	public Trader() {
 		super("Wandering Trader");
-		initTrader();
 	}
 
 	@Override
@@ -54,6 +60,7 @@ public class Trader extends Thread {
 		final GameServerState gameServerState = GameServerState.instance;
 		lastTraderAction = System.currentTimeMillis();
 		targetPlayer = getNextPlayerTarget();
+		if(GameCommon.getGameState() == null) return;
 		if (simulationGroup != null) simulationGroup.deleteMembers();
 		if (targetPlayer != null) {
 			final SimulationJob simJob = new SimulationJob() {
@@ -65,13 +72,14 @@ public class Trader extends Thread {
 						spawnPos = params[0];
 						targetPos = params[1];
 					} else {
-						spawnPos = simMan.getUnloadedSectorAround(new Vector3i(2, 2, 2), new Vector3i());
+						spawnPos = simMan.getUnloadedSectorAround(targetPlayer.getSector(), new Vector3i());
 						targetPos = targetPlayer.getSector();
 					}
 					simulationGroup = new WanderingTraderSimulationGroup(gameServerState);
 					simMan.addGroup(simulationGroup);
 					int factionID = FactionManager.NPC_FACTION_START;
-					CatalogPermission[] temp = simMan.getBlueprintList(3, 3, factionID); //Count, Level, Faction
+					//CatalogPermission[] temp = simMan.getBlueprintList(3, 3, factionID); //Count, Level, Faction
+					CatalogPermission[] temp = getBlueprints(3);
 					//Todo: Dynamic level system that increases when players are hostile to the trader and slowly decreases over time if the trader is not attacked.
 					//CatalogPermission[] bps = new CatalogPermission[temp.length + 1];
 					//for(int i = 0; i < temp.length; i++) bps[i] = temp[i];
@@ -82,7 +90,25 @@ public class Trader extends Thread {
 				}
 			};
 			gameServerState.getSimulationManager().addJob(simJob);
-			if(!simulationGroup.getMembers().isEmpty()) traderName = simulationGroup.getMembers().get(0); //Todo: Make sure this corresponds to the main ship
+			loadTrades();
+		}
+	}
+
+	private SegmentController getTraderEntity() {
+		return GameServer.getServerState().getSegmentControllersByName().get(simulationGroup.getMembers().get(simulationGroup.getMembers().size() - 1));
+	}
+
+	private void loadTrades() {
+		try {
+			ShopInterface shopInterface = (ShopInterface) getTraderEntity();
+			shopInterface.modCredits(100000000);
+			for(TradeItemData tradeItemData : TraderManager.pool.keySet()) {
+				shopInterface.getShopInventory().putNextFreeSlotWithoutException(tradeItemData.getItemId(), tradeItemData.getAmount(), 0);
+				((TradePrice) shopInterface.getPrice(tradeItemData.getItemId(), false)).setPrice((int) tradeItemData.getPrice());
+			}
+		} catch(Exception exception) {
+			exception.printStackTrace();
+			WanderingTrader.log.warning("Trader ship MUST have a shop module on it!");
 		}
 	}
 
@@ -99,42 +125,29 @@ public class Trader extends Thread {
 		return playerData;
 	}
 
-	/*
-	private CatalogPermission getTraderBP() {
-
-	}
-	 */
-
-	/*
-	private void spawnAdvancedPirates(PlayerState p) {
-		final Vector3i spawnPos = new Vector3i(p.getCurrentSector());
-		final GameServerState state = GameServerState.instance;
-		final String targetUID = p.getFirstControlledTransformableWOExc().getUniqueIdentifier();
-		//create a job for the simulationManager to execute
-		final SimulationJob simJob = new SimulationJob() {
-			@Override
-			public void execute(SimulationManager simMan) {
-				Vector3i unloadedPos = simMan.getUnloadedSectorAround(spawnPos,new Vector3i());
-				//create group
-				ShipSimulationGroup myGroup = new AttackSingleEntitySimulationGroup(state,unloadedPos, targetUID);
-				simMan.addGroup(myGroup);
-				//spawn members
-				int factionID = -1;
-				CatalogPermission[] bps = simMan.getBlueprintList(3,1,factionID);
-				if (bps.length == 0) {
-					new NullPointerException("no blueprints avaialbe for faction " + factionID).printStackTrace();
-					return;
+	private CatalogPermission[] getBlueprints(int count) {
+		ArrayList<CatalogPermission> bps = new ArrayList<>();
+		int i = 0;
+		for(CatalogPermission permission : Objects.requireNonNull(GameCommon.getGameState()).getCatalogManager().getCatalog()) {
+			if(i >= count) break;
+			for(String name : ConfigManager.getMainConfig().getList("trader-escort-bps")) {
+				if(permission.getUid().contains(name)) {
+					bps.add(permission);
+					i ++;
+					break;
 				}
-				myGroup.createFromBlueprints(unloadedPos,simMan.getUniqueGroupUId(),factionID,bps); //seems to try and work but doesnt spawn stuff?
-				//add program to group
-				PirateSimulationProgram myProgram = new PirateSimulationProgram(myGroup, false);
-				myGroup.setCurrentProgram(myProgram);
 			}
-		};
-		state.getSimulationManager().addJob(simJob); //adds job, is synchronized.
+		}
+		bps.add(getTraderBP());
+		return bps.toArray(new CatalogPermission[0]);
 	}
-	 */
 
+	private CatalogPermission getTraderBP() {
+		for(CatalogPermission permission : Objects.requireNonNull(GameCommon.getGameState()).getCatalogManager().getCatalog()) {
+			if(permission.getUid().contains(ConfigManager.getMainConfig().getConfigurableValue("trader-main-bp", "Wandering Trader"))) return permission;
+		}
+		return null;
+	}
 
 	/**
 	 * Updates the trader's status. If the targeted player is no longer on server, picks a new player.
@@ -144,7 +157,7 @@ public class Trader extends Thread {
 	public void update() {
 		switch (traderStatus) {
 			case IDLE: //When the trader is idling near a player, waiting for interaction.
-				if (System.currentTimeMillis() - lastTraderAction >= ConfigManager.getMainConfig().getConfigurableLong("trader-idle-timeout", 900000) || !isTargetPlayerOnline()) {
+				if (System.currentTimeMillis() - lastTraderAction >= (ConfigManager.getMainConfig().getConfigurableLong("trader-idle-timeout-minutes", 15) * 60000) || !isTargetPlayerOnline()) {
 					//If the trader has been idling for too long, move on to the next player.
 					traderStatus = TraderStatus.MOVING;
 					lastTraderAction = System.currentTimeMillis();
@@ -179,7 +192,7 @@ public class Trader extends Thread {
 				WanderingTrader.log.info("Trader has respawned.");
 				break;
 		}
-		lastUpdate = System.currentTimeMillis();
+		long lastUpdate = System.currentTimeMillis();
 	}
 
 	private void messagePlayer(String message) {
@@ -196,15 +209,8 @@ public class Trader extends Thread {
 	}
 
 	private Vector3i getTraderSector() {
-		//traderName = traderName.replace("ENTITY_SHIP_MOB_SIM_", "");
-		//traderName = traderName.substring(0, traderName.lastIndexOf(" "));
-		try {
-			return simulationGroup.getSector(traderName, new Vector3i());
-		} catch(Exception exception) {
-			//WanderingTrader.log.warning("Could not get sector for trader " + traderName + ": " + exception.getMessage());
-			//traderStatus = TraderStatus.DEAD;
-			return new Vector3i();
-		}
+		if(getTraderEntity() != null) return getTraderEntity().getSector(new Vector3i());
+		else return new Vector3i();
 	}
 
 	public void despawn() {
@@ -217,8 +223,7 @@ public class Trader extends Thread {
 	}
 
 	public String getStatus() {
-		if (simulationGroup != null)
-			return "Current Sector: " + getTraderSector().toString() + " | Target Sector: " + ((WanderingTraderSimulationProgram) simulationGroup.getCurrentProgram()).getSectorTarget().toString() + " | Status: " + traderStatus.toString() + "\nDetails: " + simulationGroup.getCurrentProgram().getEntityState().toString();
+		if(simulationGroup != null) return "Current Sector: " + getTraderSector() + "Target Sector: " + ((WanderingTraderSimulationProgram) simulationGroup.getCurrentProgram()).getSectorTarget().toString() + " | Status: " + traderStatus.toString() + "\nDetails: " + simulationGroup.getCurrentProgram().getEntityState().toString();
 		else return "Trader is not active.";
 	}
 

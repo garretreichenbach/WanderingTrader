@@ -9,7 +9,10 @@ public class ConfigManager {
 	private static FileConfiguration tradeConfig;
 	private static final String[] defaultMainConfig = {
 			"debug-mode: false",
-			"max-world-logs: 5"
+			"max-world-logs: 5",
+			"trader-idle-timeout-minutes: 15",
+			"trader-main-bp: Wandering Trader",
+			"trader-escort-bps: Trader Escort 1, Trader Escort 2"
 	};
 	private static final String[] defaultTradeConfig = {
 			//TODO: Add default trade config
